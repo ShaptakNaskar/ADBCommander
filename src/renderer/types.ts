@@ -63,6 +63,10 @@ declare global {
             stopScreenRecord: (serial: string) => Promise<void>
             reboot: (serial: string, mode: 'system' | 'recovery' | 'bootloader') => Promise<void>
             openShell: (serial: string) => Promise<void>
+            connectWireless: (ip: string, port: number) => Promise<{ success: boolean; message: string }>
+            disconnectWireless: (ip: string, port: number) => Promise<void>
+            pairDevice: (ip: string, port: number, pairingCode: string) => Promise<{ success: boolean; message: string }>
+            execRawAdb: (args: string[]) => Promise<{ stdout: string; stderr: string; success: boolean }>
             openFolder: (path: string) => Promise<void>
             getAdbStatus: () => Promise<{ ready: boolean; path: string | null }>
             onCommandLog: (callback: (logEntry: LogEntry) => void) => () => void
@@ -77,6 +81,12 @@ declare global {
             rebootAdvanced: (serial: string, mode: string) => Promise<void>
             runLogcat: (serial: string, filter: string) => Promise<string>
             pushToDevice: (serial: string, destination: string) => Promise<{ success: boolean; message: string }>
+
+            // Auto-updater
+            checkForUpdates: () => Promise<{ available: boolean; info: { version: string; releaseNotes?: string } | null }>
+            installUpdate: () => Promise<void>
+            onUpdateAvailable: (callback: (info: { version: string; releaseNotes?: string }) => void) => () => void
+            onUpdateDownloaded: (callback: (info: { version: string; releaseNotes?: string }) => void) => () => void
         }
     }
 }

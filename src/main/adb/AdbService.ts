@@ -228,11 +228,10 @@ export class AdbService {
      */
     private getRemoteSize(serial: string, path: string): number {
         try {
-            // Use -k to ensure 1K blocks, though -s usually implies it on Android mostly
-            // Avoid pipes to reduce shell dependency issues
+            // Pass du args separately to avoid shell injection via single-quoted path
             const output = execFileSync(
                 this.adbPath,
-                ['-s', serial, 'shell', `du -s -k '${path}'`],
+                ['-s', serial, 'shell', 'du', '-s', '-k', path],
                 { encoding: 'utf-8', timeout: 60000 }
             )
             // Output format: "12345   /path/to/file"
@@ -624,6 +623,39 @@ export class AdbService {
         this.execDevice(serial, args)
     }
 
+    async pairDevice(ip: string, port: number, pairingCode: string): Promise<{ success: boolean; message: string }> {
+        try {
+            const output = this.exec(['pair', `${ip}:${port}`, pairingCode])
+            const success = output.toLowerCase().includes('paired') || output.toLowerCase().includes('success')
+            return { success, message: output }
+        } catch (error: unknown) {
+            const err = error as { message?: string }
+            return { success: false, message: err.message ?? 'Pairing failed' }
+        }
+    }
+
+    async execRawCommand(args: string[]): Promise<{ stdout: string; stderr: string; success: boolean }> {
+        try {
+            const { stdout, stderr } = await execFileAsync(this.adbPath, args, {
+                encoding: 'utf-8',
+                timeout: 30000,
+                maxBuffer: 50 * 1024 * 1024
+            })
+            return {
+                stdout: (stdout as string).trim(),
+                stderr: (stderr as string).trim(),
+                success: true
+            }
+        } catch (error: unknown) {
+            const err = error as { stdout?: string; stderr?: string; message?: string }
+            return {
+                stdout: err.stdout?.trim() ?? '',
+                stderr: err.stderr?.trim() ?? err.message ?? 'Command failed',
+                success: false
+            }
+        }
+    }
+
     async connectWireless(ip: string, port: number = 5555): Promise<{ success: boolean; message: string }> {
         try {
             const output = this.exec(['connect', `${ip}:${port}`])
@@ -646,9 +678,12 @@ export class AdbService {
         const { spawn, execSync } = await import('child_process')
 
         if (process.platform === 'win32') {
-            spawn('cmd', ['/c', 'start', 'cmd', '/k', `"${this.adbPath}"`, '-s', serial, 'shell'], {
+            // Build the /k command as a single string so Node.js doesn't double-escape the quotes
+            const adbCmd = `"${this.adbPath}" -s ${serial} shell`
+            spawn('cmd', ['/c', 'start', 'cmd', '/k', adbCmd], {
                 detached: true,
-                stdio: 'ignore'
+                stdio: 'ignore',
+                windowsVerbatimArguments: true
             })
         } else if (process.platform === 'darwin') {
             spawn('osascript', [

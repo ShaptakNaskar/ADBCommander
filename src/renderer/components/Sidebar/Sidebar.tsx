@@ -5,14 +5,18 @@ import {
     Terminal,
     ScrollText,
     Home,
-    Info
+    Info,
+    Wifi,
+    TerminalSquare
 } from 'lucide-react'
 import type { DeviceInfo } from '../../types'
 import './Sidebar.css'
 
+type View = 'welcome' | 'dashboard' | 'backup' | 'actions' | 'powertools' | 'wireless' | 'adbshell' | 'console' | 'about'
+
 interface SidebarProps {
     currentView: string
-    onViewChange: (view: 'welcome' | 'dashboard' | 'backup' | 'actions' | 'powertools' | 'console' | 'about') => void
+    onViewChange: (view: View) => void
     deviceCount: number
     selectedDevice: DeviceInfo | null
     adbReady: boolean
@@ -25,6 +29,8 @@ export function Sidebar({ currentView, onViewChange, deviceCount, selectedDevice
         { id: 'backup', icon: HardDrive, label: 'Backup & Restore', disabled: !selectedDevice },
         { id: 'actions', icon: Zap, label: 'Quick Actions', disabled: !selectedDevice },
         { id: 'powertools', icon: Terminal, label: 'Power Tools', disabled: !selectedDevice },
+        { id: 'wireless', icon: Wifi, label: 'Wireless ADB' },
+        { id: 'adbshell', icon: TerminalSquare, label: 'ADB Terminal' },
         { id: 'console', icon: ScrollText, label: 'Console' },
         { id: 'about', icon: Info, label: 'About' }
     ]
@@ -47,7 +53,7 @@ export function Sidebar({ currentView, onViewChange, deviceCount, selectedDevice
                     <button
                         key={item.id}
                         className={`nav-item ${currentView === item.id ? 'active' : ''} ${item.disabled ? 'disabled' : ''}`}
-                        onClick={() => !item.disabled && onViewChange(item.id as any)}
+                        onClick={() => !item.disabled && onViewChange(item.id as View)}
                         disabled={item.disabled}
                     >
                         <item.icon className="nav-icon" />

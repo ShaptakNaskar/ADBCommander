@@ -34,6 +34,7 @@ export function PowerTools({ device, onToast }: PowerToolsProps) {
     const [isLoadingPkgs, setIsLoadingPkgs] = useState(false)
     const [showSystemPkgs, setShowSystemPkgs] = useState(false)
     const [disablingPkg, setDisablingPkg] = useState<string | null>(null)
+    const [enablingPkg, setEnablingPkg] = useState<string | null>(null)
     const [uninstallingPkg, setUninstallingPkg] = useState<string | null>(null)
     const [logcatOutput, setLogcatOutput] = useState<string[]>([])
     const [isLogcatRunning, setIsLogcatRunning] = useState(false)
@@ -88,7 +89,7 @@ export function PowerTools({ device, onToast }: PowerToolsProps) {
 
     const handleEnablePackage = async (pkg: string) => {
         if (!device) return
-        setDisablingPkg(pkg)
+        setEnablingPkg(pkg)
         try {
             const result = await window.adb.enablePackage(device.serial, pkg)
             if (result.success) {
@@ -99,7 +100,7 @@ export function PowerTools({ device, onToast }: PowerToolsProps) {
         } catch {
             onToast({ type: 'error', message: `Failed to enable ${pkg}` })
         } finally {
-            setDisablingPkg(null)
+            setEnablingPkg(null)
         }
     }
 
@@ -314,10 +315,10 @@ export function PowerTools({ device, onToast }: PowerToolsProps) {
                                                     <button
                                                         className="pkg-btn enable"
                                                         onClick={() => handleEnablePackage(pkg)}
-                                                        disabled={disablingPkg === pkg || uninstallingPkg === pkg}
+                                                        disabled={enablingPkg === pkg || uninstallingPkg === pkg}
                                                         title="Enable package"
                                                     >
-                                                        {disablingPkg === pkg ? <Loader2 size={14} className="spin" /> : <Check size={14} />}
+                                                        {enablingPkg === pkg ? <Loader2 size={14} className="spin" /> : <Check size={14} />}
                                                     </button>
                                                     {!showSystemPkgs && (
                                                         <button

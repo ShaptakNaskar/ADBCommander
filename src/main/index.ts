@@ -5,6 +5,7 @@ import { DeviceMonitor } from './adb/DeviceMonitor'
 import { FileBrowser } from './adb/FileBrowser'
 import { BinaryManager } from './binaries/BinaryManager'
 import { logger } from './utils/LogService'
+import { autoUpdater } from 'electron-updater'
 
 // Disable Chromium sandbox on Linux to avoid SUID permission issues
 // This must be called before app.whenReady()
@@ -103,8 +104,14 @@ function setupIpcHandlers(): void {
 
     // File browser
     ipcMain.handle('list-files', async (_, serial: string, path: string) => {
-        const fileBrowser = new FileBrowser(adbService!)
-        return fileBrowser.listFiles(serial, path)
+        if (!adbService) return []
+        try {
+            const fileBrowser = new FileBrowser(adbService)
+            return fileBrowser.listFiles(serial, path)
+        } catch (error) {
+            logger.error(`List files failed: ${error}`)
+            return []
+        }
     })
 
     // Backup/Restore
@@ -325,11 +332,11 @@ function setupIpcHandlers(): void {
         if (!adbService) return
         try {
             if (mode === 'system') {
-                adbService.reboot(serial, 'system')
+                await adbService.reboot(serial, 'system')
             } else if (mode === 'recovery') {
-                adbService.reboot(serial, 'recovery')
+                await adbService.reboot(serial, 'recovery')
             } else if (mode === 'bootloader') {
-                adbService.reboot(serial, 'bootloader')
+                await adbService.reboot(serial, 'bootloader')
             } else if (mode === 'fastboot') {
                 // reboot fastboot is effectively reboot bootloader on most devices,
                 // but some have a separate fastboot mode
@@ -353,6 +360,55 @@ function setupIpcHandlers(): void {
             logger.error(`Logcat failed: ${error.message}`)
             return `Error: ${error.message}`
         }
+    })
+
+    // Wireless ADB
+    ipcMain.handle('connect-wireless', async (_, ip: string, port: number) => {
+        if (!adbService) return { success: false, message: 'ADB not ready' }
+        logger.command(`adb connect ${ip}:${port}`)
+        const result = await adbService.connectWireless(ip, port)
+        if (result.success) logger.output(result.message)
+        else logger.error(result.message)
+        return result
+    })
+
+    ipcMain.handle('disconnect-wireless', async (_, ip: string, port: number) => {
+        if (!adbService) return
+        logger.command(`adb disconnect ${ip}:${port}`)
+        await adbService.disconnectWireless(ip, port)
+    })
+
+    ipcMain.handle('pair-device', async (_, ip: string, port: number, pairingCode: string) => {
+        if (!adbService) return { success: false, message: 'ADB not ready' }
+        logger.command(`adb pair ${ip}:${port}`)
+        const result = await adbService.pairDevice(ip, port, pairingCode)
+        if (result.success) logger.output(result.message)
+        else logger.error(result.message)
+        return result
+    })
+
+    // Raw ADB command execution
+    ipcMain.handle('exec-raw-adb', async (_, args: string[]) => {
+        if (!adbService) return { stdout: '', stderr: 'ADB not ready', success: false }
+        logger.command(`adb ${args.join(' ')}`)
+        const result = await adbService.execRawCommand(args)
+        if (result.stdout) logger.output(result.stdout)
+        if (result.stderr) logger.error(result.stderr)
+        return result
+    })
+
+    // Auto-updater
+    ipcMain.handle('check-for-updates', async () => {
+        try {
+            const result = await autoUpdater.checkForUpdates()
+            return { available: !!result?.updateInfo, info: result?.updateInfo ?? null }
+        } catch {
+            return { available: false, info: null }
+        }
+    })
+
+    ipcMain.handle('install-update', () => {
+        autoUpdater.quitAndInstall()
     })
 
     ipcMain.handle('push-to-device', async (_, serial: string, destination: string) => {
@@ -394,7 +450,28 @@ function setupIpcHandlers(): void {
 app.whenReady().then(async () => {
     setupIpcHandlers()
     await createWindow()
-    await initializeAdb()
+    try {
+        await initializeAdb()
+    } catch (error) {
+        logger.error(`ADB initialization failed: ${error}`)
+        mainWindow?.webContents.send('adb-init-error', String(error))
+    }
+
+    // Wire auto-updater events to renderer
+    autoUpdater.on('update-available', (info) => {
+        mainWindow?.webContents.send('update-available', info)
+    })
+    autoUpdater.on('update-downloaded', (info) => {
+        mainWindow?.webContents.send('update-downloaded', info)
+    })
+    autoUpdater.on('error', (err) => {
+        logger.error(`Auto-updater error: ${err.message}`)
+    })
+
+    // Check for updates silently in background (only in production)
+    if (process.env.NODE_ENV !== 'development') {
+        autoUpdater.checkForUpdates().catch(() => { /* ignore update check failures */ })
+    }
 })
 
 app.on('window-all-closed', () => {

@@ -22,8 +22,9 @@
         "build:linux-all": "npm run build && electron-builder --linux deb rpm pacman AppImage"
     },
     "dependencies": {
-        "lucide-react": "^0.309.0",
-        "extract-zip": "^2.0.1"
+        "electron-updater": "^6.8.3",
+        "extract-zip": "^2.0.1",
+        "lucide-react": "^0.309.0"
     },
     "devDependencies": {
         "@types/node": "^20.10.0",
@@ -43,6 +44,11 @@
         "productName": "ADB Commander",
         "directories": {
             "output": "dist"
+        },
+        "publish": {
+            "provider": "github",
+            "owner": "ShaptakNaskar",
+            "repo": "ADBCommander"
         },
         "files": [
             "out/**/*",

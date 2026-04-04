@@ -5,12 +5,15 @@ export class DeviceMonitor {
     private intervalId: NodeJS.Timeout | null = null
     private lastDevices: Map<string, DeviceInfo> = new Map()
     private pollInterval: number = 2000 // 2 seconds
+    private pollCallback: ((devices: DeviceInfo[]) => void) | null = null
 
     constructor(adbService: AdbService) {
         this.adbService = adbService
     }
 
     start(callback: (devices: DeviceInfo[]) => void): void {
+        this.pollCallback = callback
+
         // Initial fetch
         this.poll(callback)
 
@@ -70,10 +73,11 @@ export class DeviceMonitor {
 
     setPollInterval(ms: number): void {
         this.pollInterval = ms
-        if (this.intervalId) {
-            // Restart with new interval
+        if (this.intervalId && this.pollCallback) {
             this.stop()
-            // Need to pass callback again - store it
+            this.intervalId = setInterval(() => {
+                this.poll(this.pollCallback!)
+            }, this.pollInterval)
         }
     }
 }

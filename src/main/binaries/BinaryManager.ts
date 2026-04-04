@@ -1,9 +1,7 @@
 import { app } from 'electron'
-import { join, dirname } from 'path'
+import { join } from 'path'
 import { existsSync, mkdirSync, createWriteStream, chmodSync, rmSync } from 'fs'
 import { get } from 'https'
-import { pipeline } from 'stream/promises'
-import { createGunzip } from 'zlib'
 
 const PLATFORM_TOOLS_URLS: Record<string, string> = {
     win32: 'https://dl.google.com/android/repository/platform-tools-latest-windows.zip',
@@ -83,6 +81,7 @@ export class BinaryManager {
                     if (response.statusCode === 301 || response.statusCode === 302) {
                         const redirectUrl = response.headers.location
                         if (redirectUrl) {
+                            response.resume() // drain so the socket is released
                             request(redirectUrl)
                             return
                         }

@@ -5,7 +5,6 @@ import {
     Camera,
     Video,
     Upload,
-    Loader2,
     Square
 } from 'lucide-react'
 import type { DeviceInfo, Toast } from '../../types'

@@ -71,6 +71,50 @@ body {
     overflow: hidden;
 }
 
+/* Update banner */
+.update-banner {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 20px;
+    background: linear-gradient(90deg, rgba(139, 92, 246, 0.2), rgba(6, 182, 212, 0.2));
+    border-bottom: 1px solid rgba(139, 92, 246, 0.4);
+    font-size: 13px;
+    color: var(--text);
+    flex-shrink: 0;
+}
+
+.update-banner span {
+    flex: 1;
+}
+
+.update-banner button {
+    padding: 5px 14px;
+    background: var(--primary);
+    border: none;
+    border-radius: 6px;
+    color: white;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background var(--transition-fast);
+}
+
+.update-banner button:hover {
+    background: var(--primary-hover);
+}
+
+.update-banner button.dismiss {
+    background: transparent;
+    color: var(--text-muted);
+    padding: 5px 8px;
+}
+
+.update-banner button.dismiss:hover {
+    color: var(--text);
+    background: transparent;
+}
+
 /* App Layout */
 .app {
     height: 100%;

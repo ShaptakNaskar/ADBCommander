@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer, shell } from 'electron'
+import { contextBridge, ipcRenderer } from 'electron'
 
 export interface DeviceInfo {
     serial: string
@@ -71,6 +71,14 @@ export interface AdbApi {
     // Shell
     openShell: (serial: string) => Promise<void>
 
+    // Wireless ADB
+    connectWireless: (ip: string, port: number) => Promise<{ success: boolean; message: string }>
+    disconnectWireless: (ip: string, port: number) => Promise<void>
+    pairDevice: (ip: string, port: number, pairingCode: string) => Promise<{ success: boolean; message: string }>
+
+    // Raw ADB terminal
+    execRawAdb: (args: string[]) => Promise<{ stdout: string; stderr: string; success: boolean }>
+
     // Utility
     openFolder: (path: string) => Promise<void>
     openExternal: (url: string) => Promise<void>
@@ -88,6 +96,12 @@ export interface AdbApi {
     rebootAdvanced: (serial: string, mode: string) => Promise<void>
     runLogcat: (serial: string, filter: string) => Promise<string>
     pushToDevice: (serial: string, destination: string) => Promise<{ success: boolean; message: string }>
+
+    // Auto-updater
+    checkForUpdates: () => Promise<{ available: boolean; info: { version: string; releaseNotes?: string } | null }>
+    installUpdate: () => Promise<void>
+    onUpdateAvailable: (callback: (info: { version: string; releaseNotes?: string }) => void) => () => void
+    onUpdateDownloaded: (callback: (info: { version: string; releaseNotes?: string }) => void) => () => void
 }
 
 const api: AdbApi = {
@@ -148,6 +162,14 @@ const api: AdbApi = {
         return () => ipcRenderer.removeListener('command-log', handler)
     },
 
+    // Wireless ADB
+    connectWireless: (ip, port) => ipcRenderer.invoke('connect-wireless', ip, port),
+    disconnectWireless: (ip, port) => ipcRenderer.invoke('disconnect-wireless', ip, port),
+    pairDevice: (ip, port, pairingCode) => ipcRenderer.invoke('pair-device', ip, port, pairingCode),
+
+    // Raw ADB terminal
+    execRawAdb: (args) => ipcRenderer.invoke('exec-raw-adb', args),
+
     // Power tools
     listPackages: (serial, includeSystem) => ipcRenderer.invoke('list-packages', serial, includeSystem),
     disablePackage: (serial, pkg) => ipcRenderer.invoke('disable-package', serial, pkg),
@@ -157,6 +179,20 @@ const api: AdbApi = {
     rebootAdvanced: (serial, mode) => ipcRenderer.invoke('reboot-advanced', serial, mode),
     runLogcat: (serial, filter) => ipcRenderer.invoke('run-logcat', serial, filter),
     pushToDevice: (serial, destination) => ipcRenderer.invoke('push-to-device', serial, destination),
+
+    // Auto-updater
+    checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
+    installUpdate: () => ipcRenderer.invoke('install-update'),
+    onUpdateAvailable: (callback) => {
+        const handler = (_: Electron.IpcRendererEvent, info: any) => callback(info)
+        ipcRenderer.on('update-available', handler)
+        return () => ipcRenderer.removeListener('update-available', handler)
+    },
+    onUpdateDownloaded: (callback) => {
+        const handler = (_: Electron.IpcRendererEvent, info: any) => callback(info)
+        ipcRenderer.on('update-downloaded', handler)
+        return () => ipcRenderer.removeListener('update-downloaded', handler)
+    },
 }
 
 contextBridge.exposeInMainWorld('adb', api)

@@ -7,12 +7,14 @@ import { Welcome } from './components/Welcome/Welcome'
 import { About } from './components/About/About'
 import { PowerTools } from './components/PowerTools/PowerTools'
 import { Console, LogEntry } from './components/Console/Console'
+import { WirelessConnect } from './components/WirelessConnect/WirelessConnect'
+import { AdbTerminal } from './components/AdbTerminal/AdbTerminal'
 
 import { Toaster, Toast } from './components/Toast/Toast'
 import { BackupOverlay } from './components/BackupOverlay/BackupOverlay'
 import type { DeviceInfo, ProgressInfo } from './types'
 
-type View = 'welcome' | 'dashboard' | 'backup' | 'actions' | 'powertools' | 'console' | 'about'
+type View = 'welcome' | 'dashboard' | 'backup' | 'actions' | 'powertools' | 'wireless' | 'adbshell' | 'console' | 'about'
 
 // Check if running in Electron
 const isElectron = typeof window !== 'undefined' && window.adb !== undefined
@@ -30,6 +32,7 @@ export default function App() {
         overallPercent: 0, filePercent: 0, elapsed: 0
     })
     const [overlayDismissed, setOverlayDismissed] = useState(false)
+    const [updateDownloaded, setUpdateDownloaded] = useState<{ version: string } | null>(null)
 
     const addLog = useCallback((type: LogEntry['type'], message: string) => {
         setLogs(prev => [...prev, {
@@ -132,10 +135,21 @@ export default function App() {
             }
         })
 
+        // Subscribe to auto-updater events
+        const unsubscribeUpdateAvailable = window.adb.onUpdateAvailable?.((info) => {
+            addToast({ type: 'info', message: `Update v${info.version} is downloading...` })
+        })
+
+        const unsubscribeUpdateDownloaded = window.adb.onUpdateDownloaded?.((info) => {
+            setUpdateDownloaded({ version: info.version })
+        })
+
         return () => {
             unsubscribe()
             unsubscribeLogs?.()
             unsubscribeBackup()
+            unsubscribeUpdateAvailable?.()
+            unsubscribeUpdateDownloaded?.()
         }
     }, [selectedDevice, addToast, addLog])
 
@@ -178,6 +192,15 @@ export default function App() {
                         onToast={addToast}
                     />
                 )
+            case 'wireless':
+                return <WirelessConnect onToast={addToast} />
+            case 'adbshell':
+                return (
+                    <AdbTerminal
+                        device={selectedDevice}
+                        onToast={addToast}
+                    />
+                )
             case 'console':
                 return (
                     <Console
@@ -198,7 +221,13 @@ export default function App() {
 
     return (
         <div className="app">
-
+            {updateDownloaded && (
+                <div className="update-banner">
+                    <span>Update v{updateDownloaded.version} ready to install</span>
+                    <button onClick={() => window.adb.installUpdate()}>Restart &amp; Install</button>
+                    <button className="dismiss" onClick={() => setUpdateDownloaded(null)}>✕</button>
+                </div>
+            )}
             <div className="app-container">
                 <Sidebar
                     currentView={currentView}

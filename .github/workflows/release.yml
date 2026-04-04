@@ -31,6 +31,9 @@ jobs:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: npx electron-builder --linux AppImage deb rpm pacman --publish never
 
+      - name: Rename .pacman to .pkg.tar.zst
+        run: for f in dist/*.pacman; do mv "$f" "${f%.pacman}.pkg.tar.zst"; done
+
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -39,7 +42,7 @@ jobs:
             dist/*.AppImage
             dist/*.deb
             dist/*.rpm
-            dist/*.pacman
+            dist/*.pkg.tar.zst
             dist/latest-linux.yml
 
   build-windows:
@@ -140,7 +143,7 @@ jobs:
             | **macOS (Apple Silicon)** | `ADB-Commander-*-macOS-arm64.dmg` | ⚠️ Untested |
             | **Ubuntu / Debian** | `ADB-Commander-*-Linux-x64.deb` | `sudo dpkg -i` |
             | **Fedora / RHEL** | `ADB-Commander-*-Linux-x64.rpm` | `sudo rpm -i` |
-            | **Arch / Manjaro** | `ADB-Commander-*-Linux-x64.pacman` | `sudo pacman -U` |
+            | **Arch / Manjaro** | `ADB-Commander-*-Linux-x64.pkg.tar.zst` | `sudo pacman -U` |
             | **Linux (universal)** | `ADB-Commander-*-Linux-x64.AppImage` | `chmod +x && ./` |
 
             > **Note:** Windows and macOS builds are untested. Please report any issues.
@@ -149,7 +152,7 @@ jobs:
             artifacts/**/*.AppImage
             artifacts/**/*.deb
             artifacts/**/*.rpm
-            artifacts/**/*.pacman
+            artifacts/**/*.pkg.tar.zst
             artifacts/**/*.exe
             artifacts/**/*.dmg
             artifacts/**/latest.yml

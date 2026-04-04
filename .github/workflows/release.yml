@@ -40,6 +40,7 @@ jobs:
             dist/*.deb
             dist/*.rpm
             dist/*.pacman
+            dist/latest-linux.yml
 
   build-windows:
     runs-on: windows-latest
@@ -66,6 +67,7 @@ jobs:
           name: windows-builds
           path: |
             dist/*.exe
+            dist/latest.yml
 
   build-macos:
     runs-on: macos-latest
@@ -92,6 +94,7 @@ jobs:
           name: macos-builds
           path: |
             dist/*.dmg
+            dist/latest-mac.yml
 
   release:
     needs: [build-linux, build-windows, build-macos]
@@ -149,5 +152,8 @@ jobs:
             artifacts/**/*.pacman
             artifacts/**/*.exe
             artifacts/**/*.dmg
+            artifacts/**/latest.yml
+            artifacts/**/latest-linux.yml
+            artifacts/**/latest-mac.yml
           draft: false
           prerelease: false
